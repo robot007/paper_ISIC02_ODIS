@@ -1,0 +1,457 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+% For submission to AUTOMATICA as a communique for fast publication.
+% Draft by Dr YangQuan Chen @11.01.0.  
+% Motivated by Prof. Kevin L Moore of CSOIS/ECE/USU
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+
+ 
+%\documentclass[a4,technote,12pt,twoside]{ieeetran}
+%\documentclass[a4,12pt,twoside]{ieeetran}
+\documentclass{cdcarta4}
+%\documentclass[a4,10pt,twoside,twocolumn]{ieeetran}
+%\documentclass[a4,12pt]{ieeetran}
+%\usepackage[dvips]{epsfig} 
+%\usepackage{subfigur} 
+\usepackage{alltt,graphicx}
+%\bibliographystyle{c:/pctexv4/texinput/ieeebib}
+\bibliographystyle{ieeebib}
+\renewcommand{\baselinestretch}{1}
+
+
+\begin{document}
+  
+
+\title{{\vspace*{-1cm} \hspace*{12.5cm} \Large \bf IEEE ISIC'02}
+\\
+ \Large \bf  
+Some Sensing  and Perception Techniques for  an Omnidirectional Ground Vehicle
+With a Laser Scanner
+\thanks{Jan. 2002.  {\em For submission to IEEE International Symposium on Intelligent Control (ISIC'02)},  Oct. 2002, Vancouver, Canada, as an invited session paper.   Invited Session   organized by Dr  Jason Gu.
+This work is supported in part by U.S. Army Automotive and Armaments Command (TACOM)
+ Intelligent Mobility Program (agreement no. DAAE07-95-3-0023. Corresponding author: Dr YangQuan Chen. E-mail:  \texttt{yqchen@ieee.org}; Tel. 01-435-7970148; Fax: 01-435-7972003. URL: \texttt{http://www.crosswinds.net/\char126 yqchen}. 
+} 
+}
+
+
+\author{
+Zhen Song,   YangQuan Chen,  Lili Ma and   You Chung Chung\\ \\
+ Center for Self-Organizing and Intelligent Systems (CSOIS),  \\
+Dept. of Electrical and Computer Engineering,  4160 Old Main Hill, \\
+Utah State University, Logan, UT 84322-4160, USA. \\
+}
+     
+    
+\maketitle
+
+\begin{abstract}                          % Not more than 200 words.
+This paper presents some techniques for sensing and perception for an
+omnidirectional ground autonomous vehicle equipped with a laser scanner. In an
+assumed structured environment, the sensing data processing methods for both 1D
+and 2D laser scanner are discussed. Raw data are segmented to lines, circles,
+ellipse, planes and corners by task depended segmentation algorithms.  Each
+subset of data is then fit by a set of known template shapes as listed above.
+ An arbitration is done via the template fitting scores for the correct object identification.
+  With the arbitrated (medium-level) information, the vehicle can infer its relative position with
+respect to the known landmarks and in turn help to determine its absolute
+position on the map.
+%\begin{keyword}   % Five to ten keywords,  
+\\
+{\bf Key Words: } 
+ Hough transform;
+ line fitting;
+ corner fitting;
+ arc/circle fitting;
+ ellipse fitting;
+ algebraic fitting;
+ %geometrical fitting;
+ weighted circle fitting;
+ Omni-directional vehicle (ODV).
+%\end{keyword}                             % keyword list.
+\end{abstract}
+
+% sorry, I have to use the following preambles
+% apologize for any inconvenience caused!
+
+\newtheorem{remark}{Remark}[section]
+%%% defines the QED square and the proof environment
+%\def\QED{~\rule[-1pt]{5pt}{5pt}\par\medskip}
+%\newenvironment{proof}{{\bf Proof: \ }}{ \hfill \QED}
+\def\etal{ {\em et  al. }}
+\def\K{ $^\circ{\rm K}$ }
+\def\norml{\parallel\!\!}
+\def\normr{\!\!\parallel}
+\def\eqdef{\stackrel{\triangle}{=}}
+\def\rd{\partial}
+\def\ba{\begin{array}}
+\def\ea{\end{array}}                                    
+\def\be{\begin{equation}}
+\def\ee{\end{equation}}
+\def\bi{\begin{itemize}}
+\def\ei{\end{itemize}}
+\def\bea{\begin{eqnarray}}
+\def\eea{\end{eqnarray}}
+\def\btb{\begin{tabular}}
+\def\etb{\end{tabular}}
+\def\ne{ \nonumber \\ \, }
+\def\ca{\citeauthor}
+\def\d{ {\rm  d} }
+\newtheorem{thm}{Theorem}[section]
+%\newtheorem{remark}{Remark}[section]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+ 
+
+%{\em To be finished by Dr Chen.}
+
+\subsection{Motivation}
+
+For any intelligent mobile robot, the perception of its environment via suitable sensing capacities plays a key role \cite{Adams99,Nourbakhsh97}. The  environment perception depends largely on the properties of environment itself. Basically, the environment can be assumed to be either static (deterministic) such as office corridor  or dynamic (changing) such as a   parking lot with vehicles in and out dynamically. In terms of 
+deterministicism of the environment, there are two types: deterministic environment and uncertain environment.
+With combination, we have four types of environments: static deterministic, dynamic deterministic, static uncertain and dynamic uncertain. For static and dynamic deterministic environments, the sensing and perception task is easier with a help of a map and the known motion patterns of the objects in the environment. For uncertain environment, it seems no {\em off-the-shelf} solution exists for general sensing and perception tasks for mobile robots \cite{Adams99}. This is because,  sensing and perception  solutions  are usually {\em platform-specific}  for mobile robot with given or existing sensing capability \cite{Adams99,Nourbakhsh97}. However, there are still some common and possibly low-level solutions applicable for all platforms. This paper attempts to present some commonly used  techniques for sensing and perception for  mobile robot equipped with a 1D or 2D laser scanner in static uncertain environment.
+%
+Our test platform is an omni-directional ground autonomous vehicle developed in the CSOIS at Utah State University (USU).
+
+
+
+Our approach for static uncertain environment perception is based on the following steps (1) laser scan raw data, (2) segmentation, (3) fitting from the object library (or template objects), (4) object arbitration or decision. 
+For step-1, pre-processing is performed to reject some obviously abnormal points or outliers.
+In step-2, the range data array from a laser scan is to be segmented to form some subsets of point clouds containing essential information for the object fitting. We assume that a library of objects such as line, corner/rectangle, arc/circle/ellipse etc. are available from the prior knowledge about the static uncertain environment.
+Then in step-3, we fit the through the library since we do not know in advance which object the given point cloud represents. The arbitration or decision on which object in step-4 is done by a rule based comparison of the fitting scores. We believe that this procedure is natural and can be regarded as a common piece of utility in sensing perception using a laser scanner. In each step of the above proposed procedure, there are many technical as well as theoretical challenges. In the present paper, we shall more focused on step-3. 
+
+The major contribution of this paper is the collection of some commonly used object fitting algorithms well tested in our experiments with our C++ and MATLAB codes publically available 
+\footnote{In the final version of this paper, we will give an URL for downloading the object fitting codes developed in this paper.}.
+
+
+\subsection{The USU ODIS Platform}
+
+The USU ODIS  robot is   a small, man-portable mobile robotic system that can be used for autonomous or 
+ semi-autonomous inspection under vehicles in a parking area \cite{moore_csm}. Customers for such a system include military police (MP) and other law enforcement and security entities. The robot features (a) three ``smart wheels''  in which both the speed and direction of the wheel can be independently controlled, (b) a vehicle electronic capability that includes multiple processors, and (c) a sensor array with a laser, sonar and IR sensors, and a video camera. ODIS employs a novel parameterized command language for intelligent behavior generation. A key feature of the ODIS control system is the use of an object recognition system that fits models to sensor data. These models are then used as input parameters to the motion and behavior control commands.
+Fig.~\ref{odis1} shows the mechanical layout of the ODIS robot. The robot is 9.8 cm tall and weighs approximately 20 kgs. Key ODIS subsystems include its mechanical, vehicle electronics (vetronics) and sensor systems.  For more detailed description, see \cite{odis_spie01}.
+%
+%
+\begin{figure}[!htb]
+%\centerline{\epsfig{file=odis1.eps,width=7.cm,height=4.5cm}}
+\center
+\includegraphics[width=7.cm,height=4.5cm]{img/odis1}
+%\vspace*{6cm}
+\caption{The mechanical and vetronics layout of ODIS} 
+\label{odis1}
+\end{figure} 
+
+
+Fig.~\ref{odis1blk} shows the behavior control architecture that has been developed. 
+Starting from the "inside out," the control architecture contains two inner motion-control loops. The inner most loop is the wheel-level control, which acts to drive each smart wheel to its desired steering and drive speed set-points. The wheel-level controller uses simple PID control algorithms. Around the inner loop is the path-tracking controller. This loop derives the set points need by the wheel-level control in order to force the vehicle to follow a desired path in space, where a path is defined as an arc in inertial space (with a prescribed velocity along the arc) and an  associated vehicle yaw motion. The path-tracking controller 
+uses a newly-developed spatial tracking control algorithm that is described in more detail in  \cite{odis_icra01}. 
+
+\begin{figure}[!htb]
+%\centerline{\epsfig{file=odis1blk.eps,width=8.3cm}}
+\center
+\includegraphics[width=8.3cm]{img/odis1blk}
+%\vspace*{6cm}
+\caption{The behavior control system architecture of ODIS} 
+\label{odis1blk}
+\end{figure} 
+
+
+
+
+The rest of the paper is organized as follows. 
+Sec.~\ref{sec2} presents a revised Hough transform method
+for an efficient segmentation of the laser scan raw data set.
+In Sec.~\ref{sec3}, several template fitting algorithms are 
+presented with detailed formulae.  
+%With the fit  results and the assumption that the
+%environment is static but uncertain, an algorithm for mobile robot ego-motion estimation is presented in Sec.~\ref{sec4}. 
+%
+Some experimental results are presented in 
+ Sec.~\ref{sec5}.  
+%
+Finally, Sec.~\ref{sec6} concludes this paper with some remarks on our on-going research efforts.
+
+
+ 
+ 
+
+
+
+%***************************************************
+\section{Sparse Hough Transform for Line Segmentation}
+\label{sec2}
+
+\subsection{Hough Transform}
+\label{sec21}
+
+Hough Transform (HT) is a popular method for the extraction of geometric primitives \cite{HoughSurvey}. At the beginning, it is only an approach for line detection. Later, many variant are developed, thus this algorithm can detect circle~\cite{Atherton99CHT}, ellipse~\cite{guil97lower}, or more complex binary patterns~\cite{guil96new}. The survey on Hough Transform~\cite{HoughSurvey} gives a good big-picture on the current research progress. 
+
+Generally speaking, HT is robust to sensor noise at the expense of slow computation. The compututational cost  of the traditional HT is   $O(n^3)$ where $n$ is the number of data points. Though some efforts were made to speed up the HT algorithm~\cite{matas98progressive}, those fast strategies were developed generally for  image data processing applications only. 
+
+
+However, in our case,  1D laser data set
+contains only {\em sparse}  
+  binary information in the region of interest. Furthermore,  only 1D array is requred for laser data instead of 2D  matrix for image data. More importantly, 
+ the laser data set is  sequential or ordered. Taking these properties of laser data set, HT can be modified to reduce the computational time. 
+
+
+%    \subsection{Line Detection}
+\subsection{Sparse Hough Transform}
+\label{sec22}
+
+
+Here we propose a Sparse Hough Transform (SPHT) that fit better to the laser data processing problem. The Standard Hough Transform (SHT) represents lines crossing a point by 
+%
+$$ \rho = x \cos\theta + y \sin\theta, $$
+%
+where $\rho$ and $\theta$ are the length of the normal and the angle of the normal with respect to the positive $x$-axis. $x$ and $y$ are the coordinates of a   point of interest in the image.   $\rho$ and $\theta$ are quantified as the dimensions of an accumulator matrix. The value of each cell of the matrix represents how many times there is a line, denoted by $(\rho, \theta)$, passed a point in the image. The idea of Sparse Hough Transform is to provide an equivalent but faster and less memory-demanding approach. Basically, SPHT does not use a 2D array to record the votes. Instead, it uses a 1D  array to do the same vote-counting job. Since in sparse case, most lines passed one point are not the fitted lines, we can compute only those lines that passed at least two points in the image. Transfer all the lines corresponding to one point in the image plant, as SHT does, would take extra computer memory and reduce the speed. 
+
+Based on the above considerations, we present an 
+ implementation of SPHT by the following   pseudo-code list:
+%
+%Img is two dimension image matrix; \\
+%$\rho_{max}$ is the number of specified $\rho$ quantization; \\
+%$\theta_{max}$ is the number of specified $\theta$ quantization. \\
+%Let X and Y be the dimension of Img \\
+%$\Delta \rho$=X/$\rho_{max}$\\
+%$\Delta \theta$=$\pi$/$\theta_{max}$ \\
+%for x=1 to X \\
+%\hspace*{4mm}    for y=1 to Y \\
+%\hspace*{8mm}        if Img(x,y)$\neq$0 \\
+%\hspace*{12mm}                for $\theta$=0 to $\pi-\Delta\theta$ step $\Delta\theta$ \\
+%\hspace*{16mm}                    $\rho'$=( (x-X)sin($\theta$)+(y-Y)cos($\theta$) )/$\Delta\rho$ \\
+%\hspace*{16mm}                    $\rho$=round($\rho' + (\rho_{max}+1)/2$) \\
+%\hspace*{16mm}                    HT($\rho,\theta$) increase for one\\
+%\hspace*{12mm}                end for\\
+%\hspace*{8mm}        end if  \\
+%\hspace*{4mm}    end for\\
+%end for
+%
+%   
+%
+(\texttt{Dat} is the input array; \texttt{Dat(n).x} is the $x$ value of the $n$-th point. 
+\texttt{Lines} is the output array that stores $(\rho,\theta)$ of the fitted lines.
+\texttt{NumLen}=0, which is the number of fitted lines.)
+
+{\footnotesize
+\texttt{for i=1 to n-1}
+\hspace*{4mm}    \texttt{for j=i+1 to n} \\
+\hspace*{8mm}                $\alpha$ = atan($\frac{ Dat(i).y- Dat(j).y}{Dat(i).x - Dat(j).x} $)\\
+\hspace*{8mm}                $\rho_0$ = (Dat(i).x cos($\alpha$ -$\pi$/2) + Dat(j).y sin($\alpha-pi/2$)\\
+\hspace*{8mm}                $\theta$= $\alpha$-sign($\rho_0$) $\pi/2$ \\
+\hspace*{8mm}                $\rho=|\rho_0|$ \\
+\hspace*{8mm}                Cell$\theta$=floor($\theta$/$\Delta\theta$)*$\Delta\theta$ \\
+\hspace*{8mm}                Cell$\rho$=floor($\rho/\Delta\rho$)*$\Delta\rho$ \\
+\hspace*{8mm}                If line n, where $n\in[1,$NumLen]  is close enough to (Cell$\rho$,Cell$\theta$) increase the vote of Lines(n) by one, otherwise NumLen=NumLen+1 and add a line (Cell$\rho$, Cell$\theta$) to Lines with vote equates to one.  \\
+\hspace*{4mm}    \texttt{end for} \\
+\texttt{end for}
+}
+
+Figure~\ref{fig:spht} shows an example of SPHT. 
+
+\subsection{Analyze on Speed and Memory Requirement}
+\label{sec23}
+
+
+In general, suppose the  angle resolution is given by $\Delta\theta$ and normal resolution   $\Delta\rho$. For SHT,   $M\times N$ cells are required for the accumulation space, where $ M = \pi/\Delta\theta $ and  
+$    N=\rho_{max}/\Delta\rho.  $
+In other words, the   memory size is $n\times M\times N$, where $n$ is the size of each cell.
+If there are $K$ valid points in the input data, the computation requirement is $O(K\times M)$.
+
+For SPHT, if there are only $K$ valid points in the input, clearly $K\ll M$ and $ K \ll N$. The maximum number of fitted lines could be $ K\times (K-1)/2$. The computation requirement is then $O(K\times (K-1)/2) $. 
+
+Figure~\ref{fig:sphtspeed} shows the computation cost of SPHT versus SHT when the image matrix/array has 100 by 100 points. In practice, in a  laser scan, the number of data point is  in the order of 10, i.e., the array  contains typically   only tens of valid data points.  From Fig.~\ref{fig:sphtspeed}, clearly, SPHT has a better performance  over SHT.
+
+
+\begin{figure}
+    \includegraphics[angle=90,width=0.5\textwidth]{img/sparsehough}
+    \caption{An Example of Sparse Hough Transform} \label{fig:spht}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[angle=90,width=0.5\textwidth]{img/SSHTSpeed}
+    \caption{Speed Comparison of SPHT and SHT} \label{fig:sphtspeed}
+\end{figure}
+
+
+
+
+
+
+%***************************************************
+\section{Teamplate Fitting Algorithms}
+\label{sec3}
+
+With  properly segmented data sets from a laser scan,  it is not certain which   template in the template library is to be used for the object fitting, without human involvement. A viable way is to try fit all templates in the library and then pick the ``best'' one via an arbitrator based on some rules from the possible prior knowledge about the objects in the static and uncertain environment.
+
+For computational efficiency, we focus ourself on the algebraic fitting which does not require any iteration.
+For geometrical fitting, is may make more sense but the iterations may take a long time and some times, convergence cannot be guarantteed. It is of course, when possible, beneficial to use 
+geometrical fitting result to cross-validate that from the algebraic fitting.
+
+\subsection{Algebraic Circle Fit}
+\label{sec31}
+
+When the radius of a circle is unknown, we could use Algebraic Circle Fit to find the best fit circle in the means of lease mean square. See Fig~\cite{fig:CirFit}.
+
+Given a set of points with coordination $(x_1,y_1), (x_2,y_2), \cdots $, we need to find a circle $$a_1 (x^2+y^2) + a_2 x + a_3 y +a_4=0 $$
+, and the error $\sum |\sqrt{ (x_i-x_c)^2+(y_i-y_c)^2 }|$ is the minimize. The origin of the circle is $(x_c,y_c)$ and 
+$$x_c = -\frac{a_2}{2 a_1} $$
+$$y_c = -\frac{a_3}{2 a_1} $$
+ So setup the matrix 
+$ \mathbf{D}=\left[\matrix{
+  x_1^2+y_1^2 & x_1 & y_1 & 1 \cr
+  x_2^2+y_2^2 & x_2 & y_2 & 1 \cr
+  x_3^2+y_3^2 & x_3 & y_3 & 1 \cr
+  \vdots & \vdots& \vdots & \vdots \cr
+  x_n^2+y_n^2 & x_n & y_n & 1 
+}\right]$
+and the least mean square solution of equation $$\mathbf{D a}=0$$, 
+where $$\mathbf{a}=\left[\matrix{
+  a_{1} \cr
+  a_{2} \cr
+  a_{3} \cr
+  a_{4} 
+} \right] $$
+is the result.
+
+The SVD decomposition of $[U,V,D]=SVD(A)$. Denote $\mathbf{V}=[v_1, v_2,\cdots,v_n]$, then the solution is $\mathbf{a}=v_4$.
+
+\subsection{Circle Fit with Known Radius}
+This approach based on algebraic circle fit in order to get better precision. 
+
+Given a set of points: $(\mathbf{x}, \mathbf{y})$, where $\mathbf{x}, \mathbf{y}$ are N by 1 vectors (elements of $\mathbf{x}$ are $x_i$, elements of $\mathbf{y}$ are $y_i$. Actual radius is $R$, estimated origin is $(x_c, y_c)$.  The solution is a $(x_c, y_c)$ to make error the minimum. 
+
+$$Error = \sum |\sqrt{(x_i-x_c)^2+(y_i-y_c)^2} - R |$$
+
+the gradient of $Error$ is 
+$$J=\left[ \matrix{
+\frac{\partial Error}{\partial x_i} & \frac{\partial Error}{\partial y_i} } \right]
+=
+\left[ \matrix{
+\frac{(x_i-x_c)}{\sqrt{(x_i-x_c)^2+(y_i-y_c)^2}} & \frac{(y_i-y_c)}{\sqrt{(x_i-x_c)^2+(y_i-y_c)^2}}
+} \right] $$
+Then we can use gradient converge approach to update the origin by
+$$ J h + Error = 0 $$
+$$ \left[ \matrix{x_c & y_c} \right] = \left[ \matrix{x_c & y_c} \right] + h $$
+
+\subsection{Weighted Circle Fitting}
+\label{sec46}
+{\em To be finished by Dr Chen.}
+
+
+\subsection{Ellipse Fit}
+The general form of Ellipses is $a_1 x^2 + a_2 x y + a_3 y^2 + a_4 x + a_5 y + a_6 =0 $. The 
+Ellipse fit problem can be defined as 
+
+Given two vector $(\mathbf{x}, \mathbf{y})$ with the same size, solve the equation $ M\mathbf{a} = 0$ by means of least mean square, where 
+$$ M= \left[\matrix{
+x_1^2 & x_1 y_1 & y_1^2 & x_1 & y_1 & 1 \cr
+x_2^2 & x_2 y_2 & y_2^2 & x_2 & y_2 & 1 \cr
+x_3^2 & x_3 y_3 & y_3^2 & x_3 & y_3 & 1 \cr
+\vdots & \vdots & \vdots& \vdots& \vdots& \vdots \cr
+x_n^2 & x_n y_n & y_n^2 & x_n & y_n & 1 
+} \right] $$
+Same as circle fit, we can do SVD decomposition for matrix $M$, $[U, S, V]= SVD(M)$, and $V=\left[\matrix{
+v_1 & v_2 & v_3 & \cdots } \right] $. The solution is $v_6$. 
+
+\subsection{Plane Fit}
+Different from above, the following algorithms are designed for 2D laser scanner data processing. Actually, the 2D laser scanner get 3D data. 
+The goal of the plane fit problem is to find the $A,B,C,D$, such that
+$$ M \times \left[ \matrix{
+    A \cr B\cr C\cr D }\right] =0 $$
+has solution by the means of least mean square, where
+$$ M= \left[ \matrix{
+    x_1 & y_1 & z_1 & 1 \cr
+    x_2 & y_2 & z_2 & 1 \cr
+    x_3 & y_3 & z_3 & 1 \cr
+    \vdots&\vdots&\vdots&\vdots \cr
+    x_n & y_n & z_n & 1  }\right] $$
+Same as above, SVD is a powerful tool to solve the problem.
+$[U, S, V]=SVD(A)$;
+$v_4$ are the solution of $[A B C D]’$.
+
+\subsection{3D Corner Fit/Detection}
+Corner detection is a normally studied as 2D image corner detection. It helps to identify 
+basic image features. See~\cite{Ruzon99Corner} and ~\cite{Smith97Susan}. For 3D corner detection, we can project the corner to 2D surface and detect the corner. The advantage is simple. The disadvantage is that some time it is unable to detect some corners.
+Here we propose two 3D Corner Fit algorithms. 
+
+The first one fit a intersection point of 3 planes as the corner. So there is not limitation
+on whether the corner is convex or not, and the corner is not necessarily to be symmetric. 
+The disadvantage of this algorithms is that it can not fit corner without plane segmentation 
+This corner fit problem is to find the best corner $\{x,y,z\}$, such that
+$$\left[ \matrix{
+    A_1 & B_1 & C_1 \cr
+    A_2 & B_2 & C_2 \cr
+    A_3 & B_3 & C_3 \cr
+    \vdots & \vdots& \vdots \cr
+    A_n & B_n & C_n } \right]
+\times
+    \left[\matrix{
+    x \cr y \cr z } \right]
++
+    \left[\matrix{
+    D_1 \cr D_2 \cr D_3 \cr \vdots \cr D_n } \right]
+=
+    \left[ \matrix{
+    e_1 \cr e_2 \cr e_3 } \right]
+$$
+or $M \times P = -D$, where,  $e_1^2+e_2^2+e_3^2$ is the minimum.
+Based on the projection theorem, the solution is
+$$P =(M^T M)^{-1} M^T (-D)$$
+$$\left[\matrix{ x & y & z} \right] = P^T $$
+
+The second one fit corner directly from 3D points. This approach reduced the requirement on segmentation. We can separate point to small subsets, and use the following corner function to 
+fit them. The limitation of the algorithm is that the corner function is only suitable for convex symmetric corners. 
+$$z=e^{k_1(x-x_0)^2+k_2(y-y_0)^2+k_3}$$
+From the view of least mean square, we have:
+    $$\left[\matrix{
+    x_1^2 & x_1 & y_1^2 & y_1 & 1 \cr
+    x_2^2 & x_2 & y_2^2 & y_2 & 1 \cr
+    \vdots& \vdots&\vdots&\vdots&\vdots \cr
+    x_n^2 & x_n & y_n^2 & y_n & 1 \cr}\right]
+    \left[\matrix{
+    c_1 \cr c_2 \cr c_3 \cr c_4 \cr c_5 \cr } \right]
+    =
+    \left[\matrix{
+    \log(z_1) \cr \log(z_2) \cr \vdots \cr \log(z_n) \cr }\right]     $$
+And the $\left[\matrix{c_1 & c_2 & c_3 & c_4 & c_5} \right]$ with minimum norm is the solution we want. This question can be solved by the same approach of the corner fit. 
+
+\begin{figure}
+    \includegraphics[width=0.5\textwidth]{img/CircleFit} \caption{Circle Fit} \label{fig:CirFit}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{{Concluding Remarks}}  
+\label{sec6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+   
+This paper presents some techniques for sensing and perception for an
+omnidirectional ground autonomous vehicle equipped with a laser scanner. In an
+assumed structured environment (static but uncertain), the sensing data processing methods for both 1D
+and 2D laser scanner are discussed. Raw data are segmented to lines, circles,
+ellipse, planes and corners by task depended segmentation algorithms.  Each
+subset of data is then fit by a known template shape as listed above.  
+
+Our immediate effort is to make use of these medium level information in our  vehicle to infer its relative position with respect to the known landmarks and in turn help to determine its absolute
+position on the map, a procedure known as mobile robot localization.
+Other future efforts include (1) the motion estimation of dynamic obstacle(s) by assuming that the environment is dynamic uncertain; (2) the fusion with sonar, laser scanner and image sensing information for local map building and
+ (3)  relative navigation  without  absolution position information (or inertial/world coordinates) via sensor fusion and spatial filtering.
+
+
+
+
+
+\section*{Acknowledgment}
+The authors would like to acknowledge the fruitful discussions with 
+CSOIS members in Vetronics Group and Intelligent Behavior Group. In particular, 
+  the authors are grateful to Professor Kevin L. Moore,  Director of CSOIS, for his   support  of this work.
+ 
+\bibliography{csois1,csois2,laser}
+ 
+\end{document}
+ 
+
+% cut paste this two bib entries in your "laser.bib"
+
